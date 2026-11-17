@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>不出包行程規劃</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#fff; --ink:#22252b; --muted:#6b7078; --line:#e4e2dc;
+    --study:#3b6fd8; --club:#e0861d; --dept:#8a4fd1; --life:#2f9a6a;
+    --danger:#d6453d; --warn:#e6a316;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{padding:22px 20px 8px;max-width:1000px;margin:auto}
+  h1{margin:0;font-size:26px}
+  header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+  main{max-width:1000px;margin:auto;padding:10px 20px 60px;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card h2{margin:0 0 10px;font-size:17px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:24px}
+  .stat span{font-size:13px;color:var(--muted)}
+  .stat.red b{color:var(--danger)}
+  form.add{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px}
+  input,select,button,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  button{cursor:pointer}
+  .primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .primary:hover{opacity:.88}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .focus-list{display:grid;gap:8px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tabs button{border-radius:999px;font-size:14px;padding:5px 12px}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .task{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;border-left:5px solid var(--c,#999)}
+  .task.done{opacity:.5}
+  .task.done .t-title{text-decoration:line-through}
+  .task input[type=checkbox]{width:20px;height:20px;padding:0;flex:none}
+  .t-main{flex:1;min-width:0}
+  .t-title{font-weight:600;word-break:break-word}
+  .t-meta{font-size:12.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+  .pill{font-size:12px;padding:1px 8px;border-radius:999px;color:#fff;background:var(--c,#999)}
+  .due{font-size:12.5px;font-weight:600;white-space:nowrap}
+  .due.over{color:var(--danger)} .due.soon{color:var(--warn)} .due.ok{color:var(--muted)}
+  .del{border:none;background:none;color:var(--muted);font-size:18px;padding:2px 6px}
+  .del:hover{color:var(--danger)}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .day{border:1px solid var(--line);border-radius:10px;padding:8px;min-height:120px;background:#fff}
+  .day.today{border:2px solid var(--ink)}
+  .day h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600}
+  .day.today h3{color:var(--ink)}
+  .chip{font-size:12px;padding:3px 6px;border-radius:6px;margin-bottom:4px;color:#fff;background:var(--c);word-break:break-word}
+  .chip.done{opacity:.4;text-decoration:line-through}
+  .weeknav{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+  .weeknav span{font-size:14px;color:var(--muted);margin-left:6px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .c-study{--c:var(--study)} .c-club{--c:var(--club)} .c-dept{--c:var(--dept)} .c-life{--c:var(--life)}
+  @media (max-width:760px){
+    form.add{grid-template-columns:1fr 1fr}
+    form.add input[name=title]{grid-column:1/-1}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .week{grid-template-columns:1fr}
+    .day{min-height:auto}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🗓️ 不出包行程規劃</h1>
+  <p>課業、社團、系學會雜事，全部丟進來，它會告訴你今天先做什麼。</p>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="stat red"><b id="sOver">0</b><span>已經過期</span></div>
+    <div class="stat"><b id="sToday">0</b><span>今天到期</span></div>
+    <div class="stat"><b id="sWeek">0</b><span>7 天內到期</span></div>
+    <div class="stat"><b id="sDone">0</b><span>已完成</span></div>
+  </section>
+
+  <section class="card">
+    <h2>➕ 新增一件事</h2>
+    <form class="add" id="addForm">
+      <input name="title" placeholder="要做什麼？例如：線代作業 3.2" required>
+      <select name="cat">
+        <option value="study">📚 課業</option>
+        <option value="club">🎸 社團</option>
+        <option value="dept">🏛️ 系學會</option>
+        <option value="life">🐶 生活</option>
+      </select>
+      <input name="due" type="date" required>
+      <select name="pri">
+        <option value="2">普通</option>
+        <option value="3">很重要</option>
+        <option value="1">有空再做</option>
+      </select>
+      <select name="hours">
+        <option value="0.5">約 30 分</option>
+        <option value="1" selected>約 1 小時</option>
+        <option value="2">約 2 小時</option>
+        <option value="4">半天</option>
+        <option value="8">一整天</option>
+      </select>
+      <button class="primary">加入</button>
+    </form>
+    <div class="hint">小技巧：大事情（期中考、成發）拆成小步驟分開加，例如「讀第 1–2 章」「讀第 3–4 章」，比較不會最後一天爆炸。</div>
+  </section>
+
+  <section class="card">
+    <h2>🔥 今天先做這幾件</h2>
+    <div class="focus-list" id="focus"></div>
+    <div class="hint">排序方式：越快到期、越重要、越花時間的事排越前面。過期的永遠在最上面。</div>
+  </section>
+
+  <section class="card">
+    <h2>📅 這週一覽</h2>
+    <div class="weeknav">
+      <button id="prevW">← 上週</button>
+      <button id="thisW">本週</button>
+      <button id="nextW">下週 →</button>
+      <span id="weekLabel"></span>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="card">
+    <h2>📋 全部清單</h2>
+    <div class="tabs" id="tabs">
+      <button data-f="all" class="on">全部</button>
+      <button data-f="study">📚 課業</button>
+      <button data-f="club">🎸 社團</button>
+      <button data-f="dept">🏛️ 系學會</button>
+      <button data-f="life">🐶 生活</button>
+      <button data-f="done">✅ 已完成</button>
+    </div>
+    <div class="focus-list" id="list"></div>
+  </section>
+
+  <section class="card">
+    <h2>💾 備份</h2>
+    <div class="row">
+      <button id="exportBtn">匯出備份</button>
+      <label class="row"><button type="button" id="importBtn">匯入備份</button>
+        <input type="file" id="importFile" accept=".json" hidden></label>
+      <button id="clearDone">清掉已完成的</button>
+    </div>
+    <div class="hint">資料只存在「這台裝置的這個瀏覽器」裡。換手機／電腦前，先匯出備份，再到另一台匯入。</div>
+  </section>
+</main>
+
+<script>
+const KEY = 'noFailPlanner.v1';
+const CATS = {
+  study:{name:'課業',icon:'📚'}, club:{name:'社團',icon:'🎸'},
+  dept:{name:'系學會',icon:'🏛️'}, life:{name:'生活',icon:'🐶'}
+};
+const PRI = {1:'有空再做',2:'普通',3:'很重要'};
+const WD = ['日','一','二','三','四','五','六'];
+
+let tasks = load();
+let filter = 'all';
+let weekOffset = 0;
+
+function load(){
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; }
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch(e){}
+}
+
+function ymd(d){
+  const z = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+}
+function parseDay(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function todayDate(){ const t = new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); }
+function daysLeft(s){ return Math.round((parseDay(s) - todayDate())/86400000); }
+
+function dueText(s){
+  const n = daysLeft(s);
+  if (n < 0) return {t:`過期 ${-n} 天！`, c:'over'};
+  if (n === 0) return {t:'今天到期', c:'over'};
+  if (n === 1) return {t:'明天到期', c:'soon'};
+  if (n <= 3) return {t:`剩 ${n} 天`, c:'soon'};
+  const d = parseDay(s);
+  return {t:`${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）· 剩 ${n} 天`, c:'ok'};
+}
+
+// 急迫分數：越快到期、越重要、越花時間 → 越高
+function score(t){
+  const n = daysLeft(t.due);
+  const urgency = n < 0 ? 100 + (-n) : 10 / (n + 1);
+  return urgency * (0.6 + t.pri * 0.4) + t.hours * 0.3;
+}
+
+function esc(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function taskEl(t){
+  const d = dueText(t.due);
+  const div = document.createElement('div');
+  div.className = `task c-${t.cat}` + (t.done ? ' done' : '');
+  div.innerHTML = `
+    <input type="checkbox" ${t.done ? 'checked' : ''} aria-label="完成">
+    <div class="t-main">
+      <div class="t-title">${esc(t.title)}</div>
+      <div class="t-meta">
+        <span class="pill">${CATS[t.cat].icon} ${CATS[t.cat].name}</span>
+        <span>${PRI[t.pri]}</span>
+        <span>⏱ ${t.hours < 1 ? t.hours*60 + ' 分' : t.hours + ' 小時'}</span>
+      </div>
+    </div>
+    ${t.done ? '' : `<span class="due ${d.c}">${d.t}</span>`}
+    <button class="del" title="刪除">×</button>`;
+  div.querySelector('input').onchange = e => { t.done = e.target.checked; save(); render(); };
+  div.querySelector('.del').onclick = () => {
+    if (confirmDelete(div)) { tasks = tasks.filter(x => x.id !== t.id); save(); render(); }
+  };
+  return div;
+}
+
+// 第一次按 × 先變紅提醒，3 秒內再按一次才真的刪
+function confirmDelete(div){
+  const b = div.querySelector('.del');
+  if (b.dataset.armed) return true;
+  b.dataset.armed = '1'; b.textContent = '確定？'; b.style.color = 'var(--danger)';
+  setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = '×'; b.style.color = ''; } }, 3000);
+  return false;
+}
+
+function render(){
+  const open = tasks.filter(t => !t.done);
+  // stats
+  document.getElementById('sOver').textContent = open.filter(t => daysLeft(t.due) < 0).length;
+  document.getElementById('sToday').textContent = open.filter(t => daysLeft(t.due) === 0).length;
+  document.getElementById('sWeek').textContent = open.filter(t => { const n = daysLeft(t.due); return n >= 0 && n <= 7; }).length;
+  document.getElementById('sDone').textContent = tasks.filter(t => t.done).length;
+
+  // focus: top 3 + all overdue
+  const focus = document.getElementById('focus');
+  focus.innerHTML = '';
+  const sorted = [...open].sort((a,b) => score(b) - score(a));
+  const over = sorted.filter(t => daysLeft(t.due) < 0);
+  const top = over.length > 3 ? over : sorted.slice(0, 3);
+  if (!top.length) focus.innerHTML = '<div class="empty">目前沒有待辦，爽啦 🎉 去遛狗吧</div>';
+  top.forEach(t => focus.appendChild(taskEl(t)));
+
+  // list
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  let shown;
+  if (filter === 'done') shown = tasks.filter(t => t.done);
+  else if (filter === 'all') shown = open;
+  else shown = open.filter(t => t.cat === filter);
+  shown.sort((a,b) => a.due.localeCompare(b.due) || b.pri - a.pri);
+  if (!shown.length) list.innerHTML = '<div class="empty">這裡空空的</div>';
+  shown.forEach(t => list.appendChild(taskEl(t)));
+
+  renderWeek();
+}
+
+function renderWeek(){
+  const week = document.getElementById('week');
+  week.innerHTML = '';
+  const t0 = todayDate();
+  const mon = new Date(t0);
+  mon.setDate(t0.getDate() - ((t0.getDay() + 6) % 7) + weekOffset * 7);
+  const end = new Date(mon); end.setDate(mon.getDate() + 6);
+  document.getElementById('weekLabel').textContent =
+    `${mon.getMonth()+1}/${mon.getDate()} – ${end.getMonth()+1}/${end.getDate()}`;
+  for (let i = 0; i < 7; i++){
+    const d = new Date(mon); d.setDate(mon.getDate() + i);
+    const key = ymd(d);
+    const box = document.createElement('div');
+    box.className = 'day' + (key === ymd(t0) ? ' today' : '');
+    box.innerHTML = `<h3>週${WD[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}</h3>`;
+    tasks.filter(t => t.due === key).sort((a,b) => a.done - b.done || b.pri - a.pri).forEach(t => {
+      const c = document.createElement('div');
+      c.className = `chip c-${t.cat}` + (t.done ? ' done' : '');
+      c.textContent = t.title;
+      box.appendChild(c);
+    });
+    week.appendChild(box);
+  }
+}
+
+// add
+const form = document.getElementById('addForm');
+form.due.value = ymd(todayDate());
+form.onsubmit = e => {
+  e.preventDefault();
+  const f = new FormData(form);
+  tasks.push({
+    id: Date.now() + Math.random(),
+    title: f.get('title').trim(),
+    cat: f.get('cat'),
+    due: f.get('due'),
+    pri: Number(f.get('pri')),
+    hours: Number(f.get('hours')),
+    done: false
+  });
+  save();
+  form.title.value = '';
+  form.title.focus();
+  render();
+};
+
+// tabs
+document.getElementById('tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+};
+
+// week nav
+document.getElementById('prevW').onclick = () => { weekOffset--; renderWeek(); };
+document.getElementById('nextW').onclick = () => { weekOffset++; renderWeek(); };
+document.getElementById('thisW').onclick = () => { weekOffset = 0; renderWeek(); };
+
+// backup
+document.getElementById('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `行程備份-${ymd(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data)) throw 0;
+    const ids = new Set(tasks.map(t => t.id));
+    data.forEach(t => { if (t && t.title && t.due && !ids.has(t.id)) tasks.push(t); });
+    save(); render();
+  } catch(err) {
+    document.getElementById('importBtn').textContent = '檔案格式不對 😢';
+    setTimeout(() => document.getElementById('importBtn').textContent = '匯入備份', 2500);
+  }
+  e.target.value = '';
+};
+document.getElementById('clearDone').onclick = () => {
+  tasks = tasks.filter(t => !t.done); save(); render();
+};
+
+render();
+</script>
+</body>
+</html>

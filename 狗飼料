@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>狗狗餵食量計算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: practical club tool, warm and clear
+   IDEA: a feeding card taped to the food bin
+   PICTURE: a bowl whose kibble pile grows with the grams, beside the big result
+   COLOUR and TYPE: kibble brown ground band, cream, carrot accent; Noto Sans TC
+   LAYOUT: inputs left, live result right; stacks on phone */
+:root{color-scheme:light dark;--bg:light-dark(#fbf6ef,#16110d);--card:light-dark(#fff,#221a14);--ink:light-dark(#2a1d14,#f4ebe1);--mute:light-dark(#76655a,#b5a598);--line:light-dark(#e7dccf,#3a2d23);--brown:light-dark(#7a4424,#c98a5c);--acc:light-dark(#e0662f,#ff8a4c);--soft:light-dark(#f4e7d8,#2c2119)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans TC",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(22px,4vw,48px) max(5vw,16px);max-width:1180px;margin:0 auto}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0 0 6px;font-weight:900;text-wrap:balance}
+.lead{color:var(--mute);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}.res{order:-1;position:static}}
+.row label:first-child,#idealBox label{margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
+label:first-child{margin-top:0}
+select,input{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+select:focus,input:focus,button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.seg button{font:inherit;font-weight:700;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--brown);border-color:var(--brown);color:#fff}
+.hint{font-size:13px;color:var(--mute);margin-top:4px}
+.res{background:var(--brown);color:#fff;border:0;position:sticky;top:12px}
+.res .big{font-size:clamp(52px,9vw,84px);font-weight:900;line-height:1;white-space:nowrap}
+.res .big small{font-size:.32em;font-weight:700;margin-left:6px}
+.res .sub{opacity:.9;margin-top:6px}
+.bowl{width:100%;height:130px;display:block;margin:10px 0 4px}
+.steps{background:rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;margin-top:14px;font-size:14px}
+.steps div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.steps b{white-space:nowrap}
+.warn{margin-top:12px;font-size:13px;background:rgba(0,0,0,.18);border-radius:10px;padding:10px 12px}
+h2{font-size:20px;margin:0 0 10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+td.n{text-align:right;white-space:nowrap}
+.tag{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--soft);color:var(--brown);white-space:nowrap}
+.note{font-size:13px;color:var(--mute);margin-top:10px}
+@media(prefers-reduced-motion:no-preference){#pile{transition:transform .35s ease}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--mute)}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head><body>
+<div class="band">
+<h1>狗狗每日餵食量計算</h1>
+<p class="lead">選飼料、輸入體重，自動算出每天要給幾克。處方飼料請依獸醫指示使用。</p>
+
+<div class="grid">
+<div class="card">
+  <label for="food">飼料</label>
+  <select id="food"></select>
+  <label for="kcal">熱量（kcal / 100 g）</label>
+  <input id="kcal" type="number" inputmode="decimal" step="0.1" min="50" max="700">
+  <div class="hint" id="kcalHint"></div>
+
+  <label>目標</label>
+  <div class="seg" id="goal">
+    <button type="button" data-v="keep" aria-pressed="true">維持</button>
+    <button type="button" data-v="gain" aria-pressed="false">增重</button>
+    <button type="button" data-v="lose" aria-pressed="false">減重</button>
+  </div>
+
+  <div class="row">
+    <div><label for="w">現在體重（kg）</label><input id="w" type="number" inputmode="decimal" step="0.1" min="0.5" max="100" value="18.8"></div>
+    <div id="idealBox"><label for="iw">理想體重（kg）</label><input id="iw" type="number" inputmode="decimal" step="0.1" min="0.5" max="100" value="20"></div>
+  </div>
+
+  <label for="life">狗狗狀況</label>
+  <select id="life"></select>
+
+  <div class="row">
+    <div><label for="meals">一天分幾餐</label><select id="meals"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+    <div><label for="treat">零食佔熱量</label><select id="treat"><option value="0">不給零食</option><option value="5">5%</option><option value="10" selected>10%</option></select></div>
+  </div>
+  <div class="hint">有給零食的話，主食會自動扣掉那部分熱量。</div>
+</div>
+
+<div class="card res" aria-live="polite">
+  <div style="font-weight:700;opacity:.9">每天主食</div>
+  <div class="big" id="grams">—<small>克</small></div>
+  <div class="sub" id="perMeal"></div>
+  <svg class="bowl" viewBox="0 0 300 130" aria-hidden="true">
+    <ellipse cx="150" cy="118" rx="120" ry="9" fill="rgba(0,0,0,.25)"/>
+    <g id="pile" style="transform-origin:150px 62px">
+      <g fill="#c98a5c"><circle cx="110" cy="58" r="11"/><circle cx="132" cy="50" r="12"/><circle cx="156" cy="46" r="13"/><circle cx="180" cy="51" r="12"/><circle cx="200" cy="59" r="10"/><circle cx="122" cy="40" r="10"/><circle cx="146" cy="33" r="11"/><circle cx="170" cy="36" r="10"/><circle cx="158" cy="22" r="9"/></g>
+      <g fill="#a8673f"><circle cx="140" cy="44" r="5"/><circle cx="168" cy="44" r="5"/><circle cx="152" cy="30" r="4"/></g>
+    </g>
+    <path d="M40 60 H260 L238 112 Q150 124 62 112 Z" fill="#f4ebe1"/>
+    <path d="M40 60 H260 L255 72 H45 Z" fill="#e0662f"/>
+  </svg>
+  <div class="steps" id="steps"></div>
+  <div class="warn" id="warn"></div>
+</div>
+</div>
+</div>
+
+<div class="band" style="padding-top:0">
+<div class="card">
+<h2>飼料熱量對照</h2>
+<table class="stack"><thead><tr><th>飼料</th><th>類型</th><th style="text-align:right">kcal / 100 g</th></tr></thead><tbody id="tbl"></tbody></table>
+<p class="note">Royal Canin 和博士巧思無穀系列的熱量取自官網或包裝標示，不同國家、不同年份的版本可能略有差異。標「估算」的是包裝沒寫熱量的飼料，用成分表的蛋白質、脂肪和碳水化合物推算（每克蛋白質和碳水化合物 3.5 kcal、脂肪 8.5 kcal），只能當參考。最準的還是你手上那包的包裝，數字不一樣時直接改上面的熱量欄位就好。</p>
+<h2 style="margin-top:20px">怎麼算的</h2>
+<p style="margin:0">RER（休息能量）＝ 70 ×（體重 kg）<sup>0.75</sup>。每日熱量 ＝ RER × 狀況係數；增重和減重時，RER 用理想體重算。增重另外加 10%，減重時係數固定為 1.0。克數 ＝ 主食熱量 ÷（kcal/100g ÷ 100）。</p>
+<p class="note">算出來只是起點。每 2～3 週量一次體重：增重或減重以每週約體重的 1～2% 為目標，太慢或太快就把份量調 10%。幼犬、懷孕或哺乳中、有疾病的狗狗，請讓獸醫計算。</p>
+</div>
+</div>
+
+<script>
+{
+const FOODS=[
+ {id:'gi',n:'Gastrointestinal 腸胃道',t:'處方',k:412,h:'歐洲／紐澳版標示值；美國版約 390'},
+ {id:'gilf',n:'Gastrointestinal Low Fat 腸胃道低脂',t:'處方',k:346.5},
+ {id:'so',n:'Urinary S/O 泌尿道',t:'處方',k:388},
+ {id:'sosat',n:'Urinary S/O + Satiety 泌尿道＋體重控制',t:'處方',k:266.1},
+ {id:'renal',n:'Renal 腎臟',t:'處方',k:398.8},
+ {id:'sat',n:'Satiety Weight Management 體重控制',t:'處方',k:266.8},
+ {id:'mini8',n:'Mini Adult 8+ 小型熟齡犬',t:'一般',k:393},
+ {id:'med7',n:'Medium Adult 7+ 中型熟齡犬',t:'一般',k:384},
+ {id:'maxi8',n:'Maxi Ageing 8+ 大型熟齡犬',t:'一般',k:389},
+ {id:'med',n:'Medium Adult 中型成犬',t:'一般',k:384},
+ {id:'miniin',n:'Mini Indoor Adult 小型室內成犬',t:'一般',k:377},
+ {id:'medst',n:'Medium Sterilised 中型結紮犬',t:'一般',k:348},
+ {id:'medlt',n:'Medium Light Weight Care 中型減重',t:'一般',k:300},
+ {id:'pcad',n:'博士巧思 成犬營養專業配方',t:'估算',k:336.5,h:'包裝沒標熱量，用成分表估算（灰分假設 7%），實際可能差 5～10%'},
+ {id:'pc7',n:'博士巧思 無穀犬 7+ 熟齡',t:'一般',k:325},
+ {id:'pcgf',n:'博士巧思 無穀犬 鮭魚馬鈴薯',t:'一般',k:335},
+ {id:'bdcb',n:'寶貝狗（雞肉＋牛肉）',t:'估算',k:319.5,h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
+ {id:'bdad',n:'寶貝狗 1 歲以上成犬',t:'估算',k:316,h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
+ {id:'custom',n:'其他飼料（自己輸入熱量）',t:'',k:380}
+];
+const LIFE=[
+ {f:1.6,n:'已結紮成犬，一般活動量'},
+ {f:1.8,n:'未結紮成犬，一般活動量'},
+ {f:1.4,n:'熟齡犬或活動量低'},
+ {f:1.2,n:'很少動、容易胖'},
+ {f:2.0,n:'活動量大（常跑步、工作犬）'},
+ {f:3.0,n:'幼犬，4 個月以下',p:1},
+ {f:2.0,n:'幼犬，4 個月到成年',p:1}
+];
+const $=id=>document.getElementById(id);
+$('food').innerHTML=FOODS.map((f,i)=>`<option value="${i}">${f.n}</option>`).join('');
+$('life').innerHTML=LIFE.map((l,i)=>`<option value="${i}">${l.n}（×${l.f}）</option>`).join('');
+$('tbl').innerHTML=FOODS.filter(f=>f.id!=='custom').map(f=>`<tr><td>${f.n}</td><td><span class="tag">${f.t}</span></td><td class="n">${f.k}</td></tr>`).join('');
+let goal='keep';
+const KEY='dogFeedCalc1';
+function save(){try{localStorage.setItem(KEY,JSON.stringify({food:$('food').value,kcal:$('kcal').value,w:$('w').value,iw:$('iw').value,life:$('life').value,meals:$('meals').value,treat:$('treat').value,goal}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return false;for(const k of ['food','w','iw','life','meals','treat'])if(s[k]!=null)$(k).value=s[k];goal=s.goal||'keep';$('kcal').value=s.kcal||FOODS[+$('food').value].k;return true}catch(e){return false}}
+function setFoodKcal(){const f=FOODS[+$('food').value];$('kcal').value=f.k;}
+function fmt(x,d=0){return Number.isFinite(x)?x.toLocaleString('zh-TW',{maximumFractionDigits:d,minimumFractionDigits:d}):'—'}
+function calc(){
+  for(const b of document.querySelectorAll('#goal button'))b.setAttribute('aria-pressed',b.dataset.v===goal);
+  $('idealBox').style.visibility=goal==='keep'?'hidden':'visible';
+  const f=FOODS[+$('food').value],L=LIFE[+$('life').value];
+  $('kcalHint').textContent=f.h?f.h:(f.id==='custom'?'看包裝上的代謝能，kcal/kg 的話除以 10。':'可依包裝標示修改');
+  const w=parseFloat($('w').value),iw=parseFloat($('iw').value),k=parseFloat($('kcal').value);
+  const meals=+$('meals').value,treat=+$('treat').value/100;
+  const base=goal==='keep'?w:iw;
+  const rer=70*Math.pow(base,0.75);
+  let factor=L.f,extra=1,label='維持';
+  if(goal==='lose'){factor=1.0;label='減重'}
+  if(goal==='gain'){extra=1.1;label='增重'}
+  const mer=rer*factor*extra,food=mer*(1-treat),g=food/(k/100);
+  const ok=w>0&&base>0&&k>0;
+  $('grams').innerHTML=(ok?fmt(g):'—')+'<small>克</small>';
+  $('perMeal').textContent=ok?`分 ${meals} 餐，每餐約 ${fmt(g/meals)} 克`:'請輸入體重和熱量';
+  $('pile').style.transform=`scale(${ok?Math.max(.45,Math.min(1.25,.45+g/500)):.45})`;
+  $('steps').innerHTML=ok?[
+    [`RER（用${goal==='keep'?'現在':'理想'}體重 ${fmt(base,1)} kg）`,`${fmt(rer)} kcal`],
+    [`× ${goal==='lose'?'1.0（減重）':factor}${extra>1?' × 1.1（增重）':''}`,`${fmt(mer)} kcal`],
+    ...(treat?[[`扣掉零食 ${treat*100}%（約 ${fmt(mer*treat)} kcal）`,`${fmt(food)} kcal`]]:[]),
+    [`÷ ${fmt(k/100,2)} kcal/g`,`${fmt(g)} g`]
+  ].map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join(''):'';
+  const tips=[];
+  if(goal!=='keep'&&ok){const wk=w*0.01,wk2=w*0.02;tips.push(`${label}目標：每週約 ${fmt(wk,2)}～${fmt(wk2,2)} kg。2～3 週後看體重再調 10%。`)}
+  if(goal==='lose'&&L.p)tips.push('幼犬不建議自行減重，請先問獸醫。');
+  if(goal==='gain'&&iw<=w)tips.push('增重時，理想體重應該比現在重。');
+  if(goal==='lose'&&iw>=w)tips.push('減重時，理想體重應該比現在輕。');
+  if(f.t==='估算')tips.push('這款飼料的熱量是估算值，量體重調整份量會比較準。');
+  if(f.t==='處方')tips.push('處方飼料請照獸醫指示，份量若跟獸醫說的不同，以獸醫為準。');
+  $('warn').innerHTML=tips.join('<br>')||'算出來的是起點，每隻狗代謝不同，記得定期量體重。';
+  $('warn').style.display='block';
+  save();
+}
+if(!load())setFoodKcal();
+$('food').addEventListener('change',()=>{setFoodKcal();calc()});
+for(const id of ['kcal','w','iw','life','meals','treat'])$(id).addEventListener('input',calc);
+for(const b of document.querySelectorAll('#goal button'))b.addEventListener('click',()=>{goal=b.dataset.v;calc()});
+calc();
+}
+</script>
+</body></html>

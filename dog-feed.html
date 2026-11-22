@@ -45,6 +45,11 @@ th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
 td.n{text-align:right;white-space:nowrap}
 .tag{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--soft);color:var(--brown);white-space:nowrap}
 .note{font-size:13px;color:var(--mute);margin-top:10px}
+.grp{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.grp summary{cursor:pointer;padding:12px 14px;font-weight:700;display:flex;justify-content:space-between;gap:10px;min-height:44px;align-items:center}
+.grp summary span{font-weight:400;color:var(--mute);font-size:14px}
+.grp[open] summary{background:var(--soft)}
+.grp table{font-size:14px}.grp td{padding:8px 14px}
 .refs td:last-child{white-space:normal;font-size:13px;color:var(--mute)}
 .reflist{padding-left:22px;margin:0;font-size:14px}
 .reflist li{margin-bottom:10px}
@@ -60,8 +65,8 @@ td.n{text-align:right;white-space:nowrap}
 
 <div class="grid">
 <div class="card">
-  <label for="food">飼料</label>
-  <select id="food"></select>
+  <label for="cat">分類</label><select id="cat"></select>
+  <label for="food">飼料</label><select id="food"></select>
   <label for="kcal">熱量（kcal / 100 g）</label>
   <input id="kcal" type="number" inputmode="decimal" step="0.1" min="50" max="700">
   <div class="hint" id="kcalHint"></div>
@@ -110,8 +115,8 @@ td.n{text-align:right;white-space:nowrap}
 <div class="band" style="padding-top:0">
 <div class="card">
 <h2>飼料熱量對照</h2>
-<table class="stack"><thead><tr><th>飼料</th><th>類型</th><th style="text-align:right">kcal / 100 g</th></tr></thead><tbody id="tbl"></tbody></table>
-<p class="note">Royal Canin 和博士巧思無穀系列的熱量取自官網或包裝標示，不同國家、不同年份的版本可能略有差異。標「估算」的是包裝沒寫熱量的飼料，用成分表的蛋白質、脂肪和碳水化合物推算（每克蛋白質和碳水化合物 3.5 kcal、脂肪 8.5 kcal），只能當參考。最準的還是你手上那包的包裝，數字不一樣時直接改上面的熱量欄位就好。</p>
+<p class="note" style="margin-top:0">點分類展開，右邊數字是每 100 g 的熱量（kcal）。</p><div id="tbl"></div>
+<p class="note">Royal Canin、Hill's 和博士巧思無穀系列的熱量取自官網或包裝標示（Hill's 多為美國或加拿大版），不同國家、不同年份的版本可能略有差異。標「估算」的是包裝沒寫熱量的飼料，用成分表的蛋白質、脂肪和碳水化合物推算（每克蛋白質和碳水化合物 3.5 kcal、脂肪 8.5 kcal），只能當參考。最準的還是你手上那包的包裝，數字不一樣時直接改上面的熱量欄位就好。</p>
 <h2 style="margin-top:20px">怎麼算的</h2>
 <p style="margin:0">RER（休息能量）＝ 70 ×（體重 kg）<sup>0.75</sup>。每日熱量 ＝ RER × 狀況係數；增重和減重時，RER 用理想體重算。增重另外加 10%，減重時係數固定為 1.0。克數 ＝ 主食熱量 ÷（kcal/100g ÷ 100）。</p>
 <p class="note">算出來只是起點。每 2～3 週量一次體重：增重或減重以每週約體重的 1～2% 為目標，太慢或太快就把份量調 10%。幼犬、懷孕或哺乳中、有疾病的狗狗，請讓獸醫計算。</p>
@@ -144,33 +149,41 @@ td.n{text-align:right;white-space:nowrap}
 <li>Hall JA, et al. Using gross energy improves metabolizable energy predictive equations for pet foods whereas undigested protein and fiber content predict stool quality. <i>PLoS ONE</i>. 2013;8(1):e54405. doi:10.1371/journal.pone.0054405<br><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3544805">PubMed Central</a></li>
 <li>Tanprasertsuk J, et al. Apparent total tract nutrient digestibility and metabolizable energy estimation in commercial fresh and extruded dry kibble dog foods. <i>Translational Animal Science</i>. 2021;5(3):txab071.（乾飼料用修正 Atwater 係數會低估熱量）<br><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8279163">PubMed Central</a></li>
 </ol>
-<p class="note">飼料熱量來源：Royal Canin 各國官網產品頁（Gastrointestinal、Renal、Satiety、Mini Adult 8+、Medium Adult 7+、Maxi Ageing 8+、Medium Adult 等）；Urinary S/O 與 Gastrointestinal Low Fat 為零售商轉載的包裝標示；博士巧思無穀系列取自福壽官網；博士巧思成犬與寶貝狗包裝未標熱量，用上表的方法估算。</p>
+<p class="note">飼料熱量來源：Hill's 取自各國 Hill's 官網產品頁或官方產品資料表（i/d、i/d Low Fat、k/d、c/d 為美國版，z/d 為加拿大版，Metabolic 為南非版）；Hepatic 為 Royal Canin 澳洲官網；Royal Canin 各國官網產品頁（Gastrointestinal、Renal、Satiety、Mini Adult 8+、Medium Adult 7+、Maxi Ageing 8+、Medium Adult 等）；Urinary S/O 與 Gastrointestinal Low Fat 為零售商轉載的包裝標示；博士巧思無穀系列取自福壽官網；博士巧思成犬與寶貝狗包裝未標熱量，用上表的方法估算；M+10 官網未標熱量，因餵食建議表與 M+7 相同，推定熱量相同。</p>
 <p class="note">本工具是社團整理的參考資料，不能取代獸醫診斷。</p>
 </div>
 </div>
 
 <script>
 {
+const CATS=['皇家 處方','希爾思 處方','皇家 一般','台灣品牌','其他'];
 const FOODS=[
- {id:'gi',n:'Gastrointestinal 腸胃道',t:'處方',k:412,h:'歐洲／紐澳版標示值；美國版約 390'},
- {id:'gilf',n:'Gastrointestinal Low Fat 腸胃道低脂',t:'處方',k:346.5},
- {id:'so',n:'Urinary S/O 泌尿道',t:'處方',k:388},
- {id:'sosat',n:'Urinary S/O + Satiety 泌尿道＋體重控制',t:'處方',k:266.1},
- {id:'renal',n:'Renal 腎臟',t:'處方',k:398.8},
- {id:'sat',n:'Satiety Weight Management 體重控制',t:'處方',k:266.8},
- {id:'mini8',n:'Mini Adult 8+ 小型熟齡犬',t:'一般',k:393},
- {id:'med7',n:'Medium Adult 7+ 中型熟齡犬',t:'一般',k:384},
- {id:'maxi8',n:'Maxi Ageing 8+ 大型熟齡犬',t:'一般',k:389},
- {id:'med',n:'Medium Adult 中型成犬',t:'一般',k:384},
- {id:'miniin',n:'Mini Indoor Adult 小型室內成犬',t:'一般',k:377},
- {id:'medst',n:'Medium Sterilised 中型結紮犬',t:'一般',k:348},
- {id:'medlt',n:'Medium Light Weight Care 中型減重',t:'一般',k:300},
- {id:'pcad',n:'博士巧思 成犬營養專業配方',t:'估算',k:336.5,h:'包裝沒標熱量，用成分表估算（灰分假設 7%），實際可能差 5～10%'},
- {id:'pc7',n:'博士巧思 無穀犬 7+ 熟齡',t:'一般',k:325},
- {id:'pcgf',n:'博士巧思 無穀犬 鮭魚馬鈴薯',t:'一般',k:335},
- {id:'bdcb',n:'寶貝狗（雞肉＋牛肉）',t:'估算',k:319.5,h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
- {id:'bdad',n:'寶貝狗 1 歲以上成犬',t:'估算',k:316,h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
- {id:'custom',n:'其他飼料（自己輸入熱量）',t:'',k:380}
+ {g:0,id:'gi',n:'Gastrointestinal 腸胃道',k:412,h:'歐洲／紐澳版標示值；美國版約 390'},
+ {g:0,id:'gilf',n:'Gastrointestinal Low Fat 腸胃道低脂',k:346.5},
+ {g:0,id:'so',n:'Urinary S/O 泌尿道',k:388},
+ {g:0,id:'sosat',n:'Urinary S/O + Satiety 泌尿道＋體重控制',k:266.1},
+ {g:0,id:'renal',n:'Renal 腎臟',k:398.8},
+ {g:0,id:'hep',n:'Hepatic 肝臟',k:390.9,h:'澳洲版標示值；各國版本差異較大（約 375～404）'},
+ {g:0,id:'sat',n:'Satiety Weight Management 體重控制',k:266.8},
+ {g:1,id:'hid',n:'i/d 消化系統護理（原顆粒）',k:359.8,h:'美國版標示 3598 kcal/kg；小顆粒版請看包裝'},
+ {g:1,id:'hidlf',n:'i/d Low Fat 低脂消化系統護理',k:331.1,h:'美國版標示 3311 kcal/kg'},
+ {g:1,id:'hkd',n:'k/d 腎臟病護理（雞肉）',k:400.1,h:'美國版標示 4001 kcal/kg'},
+ {g:1,id:'hcd',n:'c/d Multicare 泌尿道護理',k:382,h:'美國版標示 3820 kcal/kg'},
+ {g:1,id:'hzd',n:'z/d 皮膚／食物敏感',k:355.6,h:'加拿大版標示 3556 kcal/kg'},
+ {g:1,id:'hwd',n:'w/d 消化／體重／血糖管理',k:310,h:'美國版標示 3100 kcal/kg'},
+ {g:1,id:'hmet',n:'Metabolic 體重管理',k:310.7,h:'南非版標示 3107 kcal/kg'},
+ {g:2,id:'mini8',n:'Mini Adult 8+ 小型熟齡犬',k:393},
+ {g:2,id:'mini12',n:'Mini Ageing 12+ 小型老犬',k:383},
+ {g:2,id:'med',n:'MA 中型成犬',k:384},
+ {g:2,id:'med7',n:'M+7 中型熟齡犬',k:384},
+ {g:2,id:'med10',n:'M+10 中型老犬',k:384,t:'估算',h:'官網沒寫熱量；餵食建議表跟 M+7 完全相同，推定熱量一樣'},
+ {g:2,id:'maxi8',n:'Maxi Ageing 8+ 大型熟齡犬',k:389},
+ {g:3,id:'pcad',n:'博士巧思 成犬營養專業配方',k:336.5,t:'估算',h:'包裝沒標熱量，用成分表估算（灰分假設 7%），實際可能差 5～10%'},
+ {g:3,id:'pc7',n:'博士巧思 無穀犬 7+ 熟齡',k:325},
+ {g:3,id:'pcgf',n:'博士巧思 無穀犬 鮭魚馬鈴薯',k:335},
+ {g:3,id:'bdcb',n:'寶貝狗（雞肉＋牛肉）',k:319.5,t:'估算',h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
+ {g:3,id:'bdad',n:'寶貝狗 1 歲以上成犬',k:316,t:'估算',h:'包裝沒標熱量，用成分表估算，實際可能差 5～10%'},
+ {g:4,id:'custom',n:'其他飼料（自己輸入熱量）',k:380}
 ];
 const LIFE=[
  {f:1.6,n:'已結紮成犬，一般活動量'},
@@ -182,13 +195,15 @@ const LIFE=[
  {f:2.0,n:'幼犬，4 個月到成年',p:1}
 ];
 const $=id=>document.getElementById(id);
-$('food').innerHTML=FOODS.map((f,i)=>`<option value="${i}">${f.n}</option>`).join('');
+$('cat').innerHTML=CATS.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+function fillFoods(){const g=+$('cat').value;$('food').innerHTML=FOODS.map((f,i)=>f.g===g?`<option value="${i}">${f.n}</option>`:'').join('')}
+fillFoods();
 $('life').innerHTML=LIFE.map((l,i)=>`<option value="${i}">${l.n}（×${l.f}）</option>`).join('');
-$('tbl').innerHTML=FOODS.filter(f=>f.id!=='custom').map(f=>`<tr><td>${f.n}</td><td><span class="tag">${f.t}</span></td><td class="n">${f.k}</td></tr>`).join('');
+$('tbl').innerHTML=CATS.slice(0,4).map((c,gi)=>`<details class="grp"><summary>${c}<span>${FOODS.filter(f=>f.g===gi).length} 款</span></summary><table><tbody>${FOODS.filter(f=>f.g===gi).map(f=>`<tr><td>${f.n}${f.t?` <span class="tag">${f.t}</span>`:''}</td><td class="n">${f.k}</td></tr>`).join('')}</tbody></table></details>`).join('');
 let goal='keep';
-const KEY='dogFeedCalc1';
+const KEY='dogFeedCalc2';
 function save(){try{localStorage.setItem(KEY,JSON.stringify({food:$('food').value,kcal:$('kcal').value,w:$('w').value,iw:$('iw').value,life:$('life').value,meals:$('meals').value,treat:$('treat').value,goal}))}catch(e){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return false;for(const k of ['food','w','iw','life','meals','treat'])if(s[k]!=null)$(k).value=s[k];goal=s.goal||'keep';$('kcal').value=s.kcal||FOODS[+$('food').value].k;return true}catch(e){return false}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(!s)return false;if(s.food!=null&&FOODS[+s.food]){$('cat').value=FOODS[+s.food].g;fillFoods();}for(const k of ['food','w','iw','life','meals','treat'])if(s[k]!=null)$(k).value=s[k];goal=s.goal||'keep';$('kcal').value=s.kcal||FOODS[+$('food').value].k;return true}catch(e){return false}}
 function setFoodKcal(){const f=FOODS[+$('food').value];$('kcal').value=f.k;}
 function fmt(x,d=0){return Number.isFinite(x)?x.toLocaleString('zh-TW',{maximumFractionDigits:d,minimumFractionDigits:d}):'—'}
 function calc(){
@@ -220,12 +235,13 @@ function calc(){
   if(goal==='gain'&&iw<=w)tips.push('增重時，理想體重應該比現在重。');
   if(goal==='lose'&&iw>=w)tips.push('減重時，理想體重應該比現在輕。');
   if(f.t==='估算')tips.push('這款飼料的熱量是估算值，量體重調整份量會比較準。');
-  if(f.t==='處方')tips.push('處方飼料請照獸醫指示，份量若跟獸醫說的不同，以獸醫為準。');
+  if(f.g<2)tips.push('處方飼料請照獸醫指示，份量若跟獸醫說的不同，以獸醫為準。');
   $('warn').innerHTML=tips.join('<br>')||'算出來的是起點，每隻狗代謝不同，記得定期量體重。';
   $('warn').style.display='block';
   save();
 }
 if(!load())setFoodKcal();
+$('cat').addEventListener('change',()=>{fillFoods();setFoodKcal();calc()});
 $('food').addEventListener('change',()=>{setFoodKcal();calc()});
 for(const id of ['kcal','w','iw','life','meals','treat'])$(id).addEventListener('input',calc);
 for(const b of document.querySelectorAll('#goal button'))b.addEventListener('click',()=>{goal=b.dataset.v;calc()});

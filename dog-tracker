@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>狗狗體態追蹤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: practical club record book, calm and clear
+   IDEA: a vet clinic weight card, one per dog, with a growth chart
+   PICTURE: large trend chart of the chosen measurement beside the latest numbers
+   COLOUR and TYPE: kibble brown, cream, carrot accent; Noto Sans TC
+   LAYOUT: dog tabs on top, chart + stats, then add-record form and history */
+:root{color-scheme:light dark;--bg:light-dark(#fbf6ef,#16110d);--card:light-dark(#fff,#221a14);--ink:light-dark(#2a1d14,#f4ebe1);--mute:light-dark(#76655a,#b5a598);--line:light-dark(#e7dccf,#3a2d23);--brown:light-dark(#7a4424,#c98a5c);--acc:light-dark(#e0662f,#ff8a4c);--soft:light-dark(#f4e7d8,#2c2119);--good:light-dark(#2f7d4f,#6fcf97);--bad:light-dark(#b3402a,#ff8a72)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans TC",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,4vw,44px) max(5vw,16px);max-width:1180px;margin:0 auto}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.1;margin:0 0 4px;font-weight:900}
+h2{font-size:19px;margin:0 0 12px}
+.lead{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tabs button,.btn{font:inherit;font-weight:700;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--brown);border-color:var(--brown);color:#fff}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;border-radius:10px}
+.btn.ghost{border-radius:10px}
+.btn.danger{color:var(--bad);border-radius:10px}
+button:focus-visible,input:focus,select:focus,textarea:focus{outline:3px solid var(--acc);outline-offset:1px}
+.top{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:800px){.top{grid-template-columns:minmax(0,1fr)}}
+.doghead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.dogname{font-size:26px;font-weight:900;line-height:1.2}
+.meta{color:var(--mute);font-size:14px}
+.metrics{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.metrics button{font:inherit;font-size:14px;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.metrics button[aria-pressed=true]{background:var(--soft);border-color:var(--brown);color:var(--brown);font-weight:700}
+.fig{position:relative;min-height:300px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.empty{display:grid;place-items:center;min-height:300px;color:var(--mute);text-align:center;padding:20px;border:1px dashed var(--line);border-radius:12px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--soft);border-radius:12px;padding:12px}
+.stat .l{font-size:13px;color:var(--mute)}
+.stat .v{font-size:26px;font-weight:900;line-height:1.15;white-space:nowrap}
+.stat .v small{font-size:14px;font-weight:500;margin-left:3px}
+.stat .d{font-size:13px;white-space:nowrap}
+.up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--mute)}
+.mcs{margin-top:10px;font-size:14px;color:var(--mute)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px 12px}
+label{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-height:44px}
+textarea{min-height:90px;font-size:14px;font-family:ui-monospace,monospace}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.msg{font-size:14px;color:var(--mute)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+td.n,th.n{text-align:right;white-space:nowrap}
+td button{font:inherit;font-size:13px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--bad);cursor:pointer}
+.scroll{overflow-x:auto}.scroll table{min-width:680px}td.note{min-width:140px}
+details.how summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.how ul{margin:6px 0 0;padding-left:20px;font-size:15px}
+.mt{margin-top:16px}
+.status{font-size:13px;color:var(--mute);margin-top:6px}
+@media(max-width:600px){.stat .v{font-size:22px}}
+.modal{position:fixed;inset:0;background:rgba(20,12,6,.55);display:none;place-items:center;padding:16px;z-index:50}
+.modal.open{display:grid}
+.modal .box{background:var(--card);color:var(--ink);border-radius:16px;padding:20px;width:min(380px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 6px;font-size:19px}
+.modal .field{margin-top:12px}
+.modal .err{color:var(--bad);font-size:14px;min-height:20px;margin-top:8px}
+.d3wrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:800px){.d3wrap{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;height:340px;border-radius:14px;background:radial-gradient(ellipse at 50% 35%,var(--soft),var(--bg) 75%);overflow:hidden;touch-action:pan-y;cursor:grab}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage .lab{position:absolute;transform:translate(-50%,-50%);font-size:13px;padding:3px 9px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--mute);white-space:nowrap;pointer-events:none;transition:opacity .2s}
+.stage .lab.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.stage .hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--mute);pointer-events:none}
+.parts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.parts button{font:inherit;font-size:14px;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.parts button[aria-pressed=true]{background:var(--soft);border-color:var(--acc);color:var(--acc);font-weight:700}
+.partinfo h3{margin:0 0 4px;font-size:18px}
+.partinfo .big{font-size:30px;font-weight:900;line-height:1.1;margin:6px 0}
+.partinfo .big small{font-size:14px;font-weight:500;margin-left:3px}
+.partinfo ul{margin:6px 0 0;padding-left:20px;font-size:15px}
+@media(prefers-reduced-motion:no-preference){.line{stroke-dasharray:2000;stroke-dashoffset:2000;animation:draw 1s ease forwards}@keyframes draw{to{stroke-dashoffset:0}}}
+</style></head><body>
+<div class="band">
+  <h1>狗狗體態追蹤</h1>
+  <p class="lead">記錄體重和腿圍、胸圍、腰圍，看肌肉和體態的變化趨勢。</p>
+
+  <div class="tabs" id="tabs" role="group" aria-label="選擇犬隻"></div>
+
+  <div id="main"></div>
+
+  <div class="card mt">
+    <h2>測量位置</h2>
+    <div class="d3wrap">
+      <div class="stage" id="stage" aria-label="狗狗立體圖，可拖曳旋轉"><span class="hint" id="hint">拖曳可以旋轉</span></div>
+      <div>
+        <div class="parts" id="parts" role="group" aria-label="選擇部位">
+          <button type="button" data-p="chest" aria-pressed="false">胸圍</button>
+          <button type="button" data-p="waist" aria-pressed="false">腰圍</button>
+          <button type="button" data-p="thigh" aria-pressed="true">大腿圍</button>
+          <button type="button" data-p="spine" aria-pressed="false">背脊（肌肉評分）</button>
+        </div>
+        <div class="partinfo" id="partinfo"></div>
+      </div>
+    </div>
+  </div>
+  <div id="main2"></div>
+
+  <div class="card mt">
+    <details id="addDogBox">
+      <summary class="btn ghost" style="display:inline-flex;align-items:center;list-style:none">＋ 新增犬隻</summary>
+      <form id="dogForm" class="mt">
+        <div class="grid2">
+          <div><label for="dName">名字 *</label><input id="dName" required maxlength="30"></div>
+          <div><label for="dBreed">品種</label><input id="dBreed" maxlength="30"></div>
+          <div><label for="dSex">性別</label><select id="dSex"><option value="">—</option><option>母</option><option>公</option></select></div>
+          <div><label for="dNeut">結紮</label><select id="dNeut"><option value="">—</option><option>已結紮</option><option>未結紮</option></select></div>
+          <div><label for="dAge">年齡（歲）</label><input id="dAge" type="number" step="0.5" min="0" max="30" inputmode="decimal" placeholder="例如 9 或 0.5"></div>
+          <div><label for="dIdeal">理想體重（kg）</label><input id="dIdeal" type="number" step="0.1" min="0" inputmode="decimal"></div>
+        </div>
+        <div class="mt"><label for="dNote">備註（狀況、飼料等）</label><input id="dNote" maxlength="120"></div>
+        <div class="actions"><button class="btn pri" type="submit">新增</button><span class="msg" id="dogMsg"></span></div>
+      </form>
+    </details>
+  </div>
+
+  <div class="card mt">
+    <details class="how">
+      <summary>怎麼量才準？</summary>
+      <ul>
+        <li><b>固定條件</b>：同一個人、同一條軟尺、每次都在早上吃飯前量</li>
+        <li><b>大腿圍</b>：狗狗自然站好，量後腿大腿最粗的地方，貼著毛但不要勒緊。左右腳選一邊固定量</li>
+        <li><b>胸圍</b>：前腳正後方、胸口最深的地方繞一圈</li>
+        <li><b>腰圍</b>：最後一根肋骨後面、腰最細的地方。腰圍變大但大腿圍沒變，通常代表長的是肥肉</li>
+        <li><b>每處量 2 次取平均</b>，差超過 0.5 cm 就再量一次</li>
+        <li>肌肉評分（MCS）可以請獸醫評，或自己摸脊椎兩側、肩胛骨、骨盆周圍的肌肉來判斷</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="card mt">
+    <h2>Excel 匯出／匯入</h2>
+    <p class="msg" style="margin-top:0">把全部犬隻和紀錄匯出成 Excel，可以傳給社團的人或放到雲端硬碟。別人在 Excel 裡新增的紀錄，也能再匯入回來：同一隻狗同一天的紀錄會被更新，其他的會加上去，不會刪掉原本的資料。</p>
+    <div class="actions">
+      <button class="btn pri" id="xlOut" type="button">匯出 Excel</button>
+      <label class="btn ghost" style="display:inline-flex;align-items:center;margin:0;font-size:16px" for="xlIn">匯入 Excel</label>
+      <input id="xlIn" type="file" accept=".xlsx" style="position:absolute;width:1px;height:1px;opacity:0">
+      <span class="msg" id="xlMsg"></span>
+    </div>
+    <p class="msg">Excel 裡要保留「犬隻」和「紀錄」兩個工作表，以及第一列的欄位名稱；日期用 2026-11-22 這種格式最保險。</p>
+  </div>
+  <div class="card mt">
+    <h2>刪除密碼</h2>
+    <p class="msg" style="margin-top:0" id="pwState"></p>
+    <div class="actions"><button class="btn ghost" type="button" id="pwChange">設定／變更密碼</button></div>
+  </div>
+  <p class="status" id="status"></p>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <form class="box" id="mForm">
+      <h3 id="mTitle"></h3>
+      <p class="msg" id="mText" style="margin:0"></p>
+      <div class="field" id="fOld"><label for="mOld">目前密碼</label><input id="mOld" type="password" autocomplete="current-password"></div>
+      <div class="field" id="fNew"><label for="mNew">新密碼（至少 4 個字）</label><input id="mNew" type="password" autocomplete="new-password"></div>
+      <div class="field" id="fNew2"><label for="mNew2">再輸入一次新密碼</label><input id="mNew2" type="password" autocomplete="new-password"></div>
+      <div class="err" id="mErr"></div>
+      <div class="actions"><button class="btn pri" type="submit" id="mOk">確定</button><button class="btn ghost" type="button" id="mCancel">取消</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="application/json" id="state">{"dogs":[{"id":"d1","name":"範例：小黑","breed":"米克斯","sex":"母","neut":"已結紮","birth":"2017-03","ideal":20,"note":"這是範例資料，可以直接刪除","records":[{"id":"r1","date":"2026-09-01","w":19.6,"thigh":31.5,"chest":66,"waist":50,"bcs":4,"mcs":"輕度流失","note":""},{"id":"r2","date":"2026-10-01","w":19.1,"thigh":30.8,"chest":65.5,"waist":49.5,"bcs":4,"mcs":"中度流失","note":"食慾稍差"},{"id":"r3","date":"2026-11-01","w":18.8,"thigh":30.2,"chest":65,"waist":49,"bcs":3,"mcs":"中度流失","note":"開始增重和緩坡散步"},{"id":"r4","date":"2026-11-22","w":19.2,"thigh":30.9,"chest":65.5,"waist":49.2,"bcs":4,"mcs":"中度流失","note":""}]}]}</script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M=[{k:'w',n:'體重',u:'kg'},{k:'thigh',n:'大腿圍',u:'cm'},{k:'chest',n:'胸圍',u:'cm'},{k:'waist',n:'腰圍',u:'cm'},{k:'bcs',n:'BCS',u:'/9'}];
+const MCS=['正常','輕度流失','中度流失','重度流失'];
+const LKEY='dogTracker1';
+let state;
+try{state=JSON.parse($('state').textContent)}catch(e){state={dogs:[]}}
+let db=null,synced={dogs:{},pw:null},chains={};
+try{const s=localStorage.getItem(LKEY);if(s)state=JSON.parse(s)}catch(e){}
+let cur=state.dogs[0]?.id||null,metric='w',pendingDel=null,part3d='thigh',sel3d=()=>{};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const age=b=>{if(!b)return'';const [y,m]=b.split('-').map(Number);const n=new Date();let mo=(n.getFullYear()-y)*12+(n.getMonth()+1-m);return mo<0?'':mo>=12?`${Math.floor(mo/12)} 歲${mo%12?` ${mo%12} 個月`:''}`:`${mo} 個月`};
+const ageToBirth=a=>{if(a==null||isNaN(a)||a<0)return'';const n=new Date(),mo=n.getFullYear()*12+n.getMonth()-Math.round(a*12);return `${Math.floor(mo/12)}-${String(mo%12+1).padStart(2,'0')}`};
+const ageYears=b=>{if(!b)return'';const [y,m]=b.split('-').map(Number),n=new Date(),mo=(n.getFullYear()-y)*12+(n.getMonth()+1-m);return mo<0?'':Math.round(mo/12*10)/10};
+const fmt=(v,d=1)=>v==null||v===''||isNaN(v)?'—':(+v).toFixed(d).replace(/\.0$/,'');
+
+function save(msg){
+  if(db){syncDb(msg);return}
+  try{localStorage.setItem(LKEY,JSON.stringify(state));$('status').textContent=msg||'已存在這個瀏覽器。'}catch(e){$('status').textContent='這個瀏覽器無法儲存資料。'}
+}
+const queue=(k,fn)=>(chains[k]=(chains[k]||Promise.resolve()).catch(()=>{}).then(fn));
+async function syncDb(msg){
+  const ops=[],ids=new Set();
+  for(const d of state.dogs){ids.add(d.id);const j=JSON.stringify(d);if(synced.dogs[d.id]!==j){synced.dogs[d.id]=j;const body=JSON.parse(j);ops.push(queue(d.id,()=>db.collection('dogs').doc(d.id).set(body)))}}
+  for(const id of Object.keys(synced.dogs))if(!ids.has(id)){delete synced.dogs[id];ops.push(queue(id,()=>db.collection('dogs').doc(id).delete()))}
+  if((state.pw||null)!==synced.pw){synced.pw=state.pw||null;const pw=synced.pw;ops.push(queue('settings',()=>db.doc('settings/main').set({pw})))}
+  if(!ops.length)return;
+  $('status').textContent='儲存中…';
+  try{await Promise.all(ops);$('status').textContent=msg||'已儲存。'}
+  catch(e){const c=e&&e.code;$('status').textContent=c==='invalid_argument'?'你只有檢視權限，變更沒有被儲存。':c==='quota_exceeded'?'資料量已達上限，請刪掉一些舊資料。':'儲存失敗，請重新整理後再試一次。'}
+}
+function dog(){return state.dogs.find(d=>d.id===cur)}
+function sorted(d){return [...d.records].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)}
+
+function renderTabs(){
+  $('tabs').innerHTML=state.dogs.map(d=>`<button type="button" data-id="${esc(d.id)}" aria-pressed="${d.id===cur}">${esc(d.name)}</button>`).join('');
+}
+function delta(rs,k){
+  const v=rs.filter(r=>r[k]!=null&&r[k]!=='');if(v.length<2)return'';
+  const a=v[v.length-2][k],b=v[v.length-1][k],dd=b-a;
+  const cls=Math.abs(dd)<0.05?'flat':dd>0?'up':'down';
+  return `<div class="d ${k==='waist'?(cls==='up'?'down':cls==='down'?'up':cls):cls}">${dd>0?'+':''}${fmt(dd)} 比上次</div>`;
+}
+function renderMain(){
+  const d=dog();
+  if(!d){$('main').innerHTML=`<div class="card empty">還沒有犬隻，按下方「新增犬隻」開始記錄。</div>`;$('main2').innerHTML='';partInfo();return}
+  const rs=sorted(d),last=rs[rs.length-1]||{};
+  const meta=[d.breed,d.sex,d.neut,age(d.birth),d.ideal?`理想 ${fmt(d.ideal)} kg`:''].filter(Boolean).map(esc).join('・');
+  $('main').innerHTML=`
+  <div class="top">
+    <div class="card">
+      <div class="doghead"><div><div class="dogname">${esc(d.name)}</div><div class="meta">${meta||'&nbsp;'}</div>${d.note?`<div class="meta">${esc(d.note)}</div>`:''}</div>
+        <button type="button" class="btn danger" id="delDog">刪除這隻</button></div>
+      <div class="metrics" role="group" aria-label="圖表項目">${M.map(m=>`<button type="button" data-m="${m.k}" aria-pressed="${m.k===metric}">${m.n}</button>`).join('')}</div>
+      ${rs.filter(r=>r[metric]!=null&&r[metric]!=='').length?`<div class="fig" id="fig"><svg id="chart" role="img" aria-label="${esc(M.find(m=>m.k===metric).n)}趨勢圖"></svg></div>`:`<div class="empty">還沒有${esc(M.find(m=>m.k===metric).n)}的紀錄，從下面新增一筆。</div>`}
+    </div>
+    <div class="card">
+      <h2>最新紀錄 <span class="meta">${esc(last.date||'')}</span></h2>
+      <div class="stats">${M.slice(0,4).map(m=>`<div class="stat"><div class="l">${m.n}</div><div class="v">${fmt(last[m.k])}<small>${m.u}</small></div>${delta(rs,m.k)}</div>`).join('')}</div>
+      <div class="mcs">BCS：<b>${last.bcs?esc(last.bcs)+' / 9':'—'}</b>　肌肉評分：<b>${esc(last.mcs||'—')}</b></div>
+      ${d.ideal&&last.w?`<div class="mcs">距離理想體重：<b>${fmt(d.ideal-last.w)} kg</b></div>`:''}
+      <div class="mcs">腰圍上升代表可能長脂肪，所以腰圍「增加」會以紅色顯示。</div>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <h2>新增一筆紀錄</h2>
+    <form id="recForm">
+      <div class="grid2">
+        <div><label for="rDate">日期 *</label><input id="rDate" type="date" required value="${new Date().toISOString().slice(0,10)}"></div>
+        <div><label for="rW">體重（kg）</label><input id="rW" type="number" step="0.1" min="0" inputmode="decimal"></div>
+        <div><label for="rThigh">大腿圍（cm）</label><input id="rThigh" type="number" step="0.1" min="0" inputmode="decimal"></div>
+        <div><label for="rChest">胸圍（cm）</label><input id="rChest" type="number" step="0.1" min="0" inputmode="decimal"></div>
+        <div><label for="rWaist">腰圍（cm）</label><input id="rWaist" type="number" step="0.1" min="0" inputmode="decimal"></div>
+        <div><label for="rBcs">BCS（1～9）</label><select id="rBcs"><option value="">—</option>${[1,2,3,4,5,6,7,8,9].map(i=>`<option>${i}</option>`).join('')}</select></div>
+        <div><label for="rMcs">肌肉評分</label><select id="rMcs"><option value="">—</option>${MCS.map(x=>`<option>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="mt"><label for="rNote">備註</label><input id="rNote" maxlength="120" placeholder="例如：換飼料、開始運動、看診結果"></div>
+      <div class="actions"><button class="btn pri" type="submit">儲存紀錄</button><span class="msg" id="recMsg"></span></div>
+    </form>
+  </div>
+
+  <div class="card mt">
+    <h2>歷史紀錄</h2>
+    ${rs.length?`<div class="scroll"><table><thead><tr><th>日期</th><th class="n">體重</th><th class="n">大腿</th><th class="n">胸</th><th class="n">腰</th><th class="n">BCS</th><th>肌肉</th><th>備註</th><th></th></tr></thead><tbody>
+    ${[...rs].reverse().map(r=>`<tr><td style="white-space:nowrap">${esc(r.date)}</td><td class="n">${fmt(r.w)}</td><td class="n">${fmt(r.thigh)}</td><td class="n">${fmt(r.chest)}</td><td class="n">${fmt(r.waist)}</td><td class="n">${esc(r.bcs||'—')}</td><td style="white-space:nowrap">${esc(r.mcs||'—')}</td><td class="note">${esc(r.note||'')}</td><td><button type="button" data-del="${esc(r.id)}">刪除</button></td></tr>`).join('')}
+    </tbody></table></div><p class="msg">體重 kg，圍度 cm。</p>`:'<p class="msg">還沒有紀錄。</p>'}
+  </div>`;
+  const m2=$('main2');m2.innerHTML='';while($('main').children.length>1)m2.appendChild($('main').children[1]);
+  drawSetup();
+  sel3d(['chest','waist','thigh'].includes(metric)?metric:part3d);
+}
+let ro;
+function drawSetup(){
+  const s=$('chart');if(ro)ro.disconnect();if(!s)return;
+  const draw=()=>{
+    const d=dog();if(!d)return;
+    const m=M.find(x=>x.k===metric);
+    const pts=sorted(d).filter(r=>r[metric]!=null&&r[metric]!=='').map(r=>({t:Date.parse(r.date),v:+r[metric],date:r.date}));
+    const W=s.clientWidth,H=s.clientHeight;if(!W||!H)return;
+    const small=W<520,L=small?40:50,R=16,T=18,B=34;
+    let vs=pts.map(p=>p.v);if(metric==='w'&&d.ideal)vs=vs.concat(+d.ideal);
+    let lo=Math.min(...vs),hi=Math.max(...vs);const pad=(hi-lo)*0.2||1;lo-=pad;hi+=pad;
+    if(metric==='bcs'){lo=1;hi=9}
+    const t0=pts[0].t,t1=pts[pts.length-1].t,span=t1-t0||1;
+    const x=t=>pts.length===1?L+(W-L-R)/2:L+(t-t0)/span*(W-L-R);
+    const y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+    const ticks=4,gs=[];for(let i=0;i<=ticks;i++){const v=lo+(hi-lo)*i/ticks;gs.push(`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${fmt(v)}</text>`)}
+    const path=pts.map((p,i)=>`${i?'L':'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+    const showLab=pts.length<=(small?5:10);
+    const dots=pts.map((p,i)=>`<circle cx="${x(p.t)}" cy="${y(p.v)}" r="5" fill="var(--card)" stroke="var(--acc)" stroke-width="3"><title>${esc(p.date)}：${fmt(p.v)} ${m.u}</title></circle>${showLab||i===pts.length-1?`<text x="${x(p.t)}" y="${y(p.v)-11}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${fmt(p.v)}</text>`:''}`).join('');
+    const xl=[pts[0],pts[pts.length-1]].filter((p,i,a)=>i===0||p.t!==a[0].t).map((p,i)=>`<text x="${x(p.t)}" y="${H-10}" text-anchor="${pts.length===1?'middle':i===0?'start':'end'}" font-size="12" fill="var(--mute)">${esc(small?p.date.slice(5):p.date)}</text>`).join('');
+    const ideal=metric==='w'&&d.ideal?`<line x1="${L}" x2="${W-R}" y1="${y(d.ideal)}" y2="${y(d.ideal)}" stroke="var(--good)" stroke-dasharray="6 5" stroke-width="2"/><text x="${W-R}" y="${y(d.ideal)-6}" text-anchor="end" font-size="12" fill="var(--good)">理想 ${fmt(d.ideal)}</text>`:'';
+    const band=metric==='bcs'?`<rect x="${L}" width="${W-L-R}" y="${y(5)}" height="${y(4)-y(5)}" fill="var(--good)" opacity=".12"/><text x="${W-R}" y="${y(5)+14}" text-anchor="end" font-size="12" fill="var(--good)">理想 4～5</text>`:'';
+    s.innerHTML=`${gs.join('')}${band}${ideal}<text x="${L}" y="12" font-size="12" fill="var(--mute)">${m.n}（${m.u}）</text><path class="line" d="${path}" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}${xl}`;
+  };
+  ro=new ResizeObserver(draw);ro.observe(s);
+}
+function render(){if(!dog())cur=state.dogs[0]?.id||null;renderTabs();renderMain()}
+const num=id=>{const v=$(id).value;return v===''?null:+v};
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  if(t.closest('#tabs')){cur=t.dataset.id;pendingDel=null;render();return}
+  if(t.dataset.m){metric=t.dataset.m;renderMain();return}
+  if(t.id==='delDog'){const d=dog();askPw(`刪除「${d.name}」`,'這隻狗的所有紀錄都會一起刪掉，無法復原。',()=>{state.dogs=state.dogs.filter(x=>x.id!==d.id);render();save('已刪除。')});return}
+  if(t.dataset.del){const d=dog(),id=t.dataset.del,r=d.records.find(x=>x.id===id);askPw('刪除這筆紀錄',`${d.name}・${r?r.date:''}`,()=>{d.records=d.records.filter(x=>x.id!==id);renderMain();save('已刪除紀錄。')});return}
+});
+document.addEventListener('submit',e=>{
+  if(e.target.id==='mForm')return;
+  e.preventDefault();
+  if(e.target.id==='recForm'){
+    const r={id:uid(),date:$('rDate').value,w:num('rW'),thigh:num('rThigh'),chest:num('rChest'),waist:num('rWaist'),bcs:$('rBcs').value?+$('rBcs').value:null,mcs:$('rMcs').value,note:$('rNote').value.trim()};
+    if(!r.date){$('recMsg').textContent='請填日期';return}
+    if([r.w,r.thigh,r.chest,r.waist,r.bcs].every(v=>v==null)&&!r.mcs){$('recMsg').textContent='至少填一項數值';return}
+    dog().records.push(r);renderMain();save('已儲存紀錄。');
+  }
+  if(e.target.id==='dogForm'){
+    const name=$('dName').value.trim();if(!name){$('dogMsg').textContent='請填名字';return}
+    const d={id:uid(),created:Date.now(),name,breed:$('dBreed').value.trim(),sex:$('dSex').value,neut:$('dNeut').value,birth:ageToBirth(num('dAge')),ideal:num('dIdeal'),note:$('dNote').value.trim(),records:[]};
+    state.dogs.push(d);cur=d.id;e.target.reset();$('addDogBox').open=false;render();save(`已新增 ${name}。`);
+  }
+});
+
+const PARTS={
+ chest:{n:'胸圍',k:'chest',u:'cm',tips:['前腳正後方、胸口最深的地方繞一圈','軟尺貼著毛，不要勒緊','胸圍主要反映骨架和胸腔，變化通常比較小']},
+ waist:{n:'腰圍',k:'waist',u:'cm',tips:['最後一根肋骨後面、腰最細的地方','腰圍變大但大腿圍沒變，通常是長了脂肪','從正上方看要有腰身，是體態理想的指標之一']},
+ thigh:{n:'大腿圍',k:'thigh',u:'cm',tips:['狗狗自然站好，量後腿大腿最粗的地方','固定量同一邊的腿','追蹤肌少症最實用的數字：穩定上升代表肌肉在長']},
+ spine:{n:'背脊（肌肉評分）',k:'mcs',u:'',tips:['正常：背脊兩側肌肉跟骨頭差不多高，摸起來平平的','輕度流失：背脊骨稍微凸出，但兩邊還有肉','中度流失：背脊明顯是一條稜線，兩側的肉往下凹','重度流失：看得到背脊一節一節凸出來']}
+};
+function partInfo(){
+  const P=PARTS[part3d],d=dog(),rs=d?sorted(d).filter(r=>r[P.k]!=null&&r[P.k]!==''):[],last=rs[rs.length-1];
+  const val=P.k==='mcs'?`<div class="big">${esc(last?last.mcs:'—')}</div>`:`<div class="big">${last?fmt(last[P.k]):'—'}<small>${P.u}</small></div>`;
+  $('partinfo').innerHTML=`<h3>${P.n}</h3><div class="meta">${d?esc(d.name)+(last?'・'+esc(last.date):'・還沒有紀錄'):''}</div>${val}<ul>${P.tips.map(t=>`<li>${t}</li>`).join('')}</ul>`;
+  for(const b of document.querySelectorAll('#parts button'))b.setAttribute('aria-pressed',b.dataset.p===part3d);
+}
+let hi3d=()=>{};
+sel3d=p=>{part3d=p;partInfo();hi3d(p)};
+$('parts').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;sel3d(b.dataset.p);if(['chest','waist','thigh'].includes(b.dataset.p)&&metric!==b.dataset.p){metric=b.dataset.p;renderMain()}});
+function init3d(){
+  const T=window.THREE,stage=$('stage');
+  if(!T){$('hint').textContent='立體圖載入失敗（需要網路），其他功能可以正常使用。';return}
+  let renderer;
+  try{renderer=new T.WebGLRenderer({antialias:true,alpha:true})}catch(e){$('hint').textContent='這個瀏覽器不支援立體圖。';return}
+  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  renderer.outputEncoding=T.sRGBEncoding;
+  stage.prepend(renderer.domElement);
+  const scene=new T.Scene(),cam=new T.PerspectiveCamera(32,1,0.1,50);
+  cam.position.set(1.2,2.3,6.2);cam.lookAt(0,1.05,0);
+  scene.add(new T.HemisphereLight(0xfff4e6,0x6b4a35,0.9));
+  const sun=new T.DirectionalLight(0xffffff,0.85);sun.position.set(3,5,4);scene.add(sun);
+  const rim=new T.DirectionalLight(0xffd9b8,0.35);rim.position.set(-4,2,-3);scene.add(rim);
+  const dogG=new T.Group();scene.add(dogG);
+  const fur=new T.MeshStandardMaterial({color:0xc98a5c,roughness:.85});
+  const furD=new T.MeshStandardMaterial({color:0x8a5233,roughness:.9});
+  const furL=new T.MeshStandardMaterial({color:0xecd2b4,roughness:.9});
+  const blk=new T.MeshStandardMaterial({color:0x1d1410,roughness:.4});
+  const V=(x,y,z)=>new T.Vector3(x,y,z);
+  const ell=(m,p,s,r)=>{const o=new T.Mesh(new T.SphereGeometry(1,40,28),m);o.position.copy(p);o.scale.copy(s);if(r)o.rotation.set(...r);dogG.add(o);return o};
+  const limb=(m,a,b,r1,r2)=>{const dir=b.clone().sub(a),len=dir.length();const o=new T.Mesh(new T.CylinderGeometry(r2,r1,len,24),m);o.position.copy(a.clone().add(b).multiplyScalar(.5));o.quaternion.setFromUnitVectors(V(0,1,0),dir.normalize());dogG.add(o);return o};
+  // body
+  ell(fur,V(0,1.12,0),V(1.25,.52,.48));
+  ell(fur,V(.62,1.08,0),V(.62,.62,.52));
+  ell(furL,V(.75,.92,0),V(.42,.36,.38));
+  ell(fur,V(-.78,1.12,0),V(.5,.5,.46));
+  // neck & head
+  limb(fur,V(.95,1.35,0),V(1.38,1.85,0),.3,.24);
+  ell(fur,V(1.52,1.95,0),V(.4,.38,.36));
+  ell(furL,V(1.9,1.82,0),V(.3,.17,.2));
+  ell(blk,V(2.17,1.86,0),V(.07,.06,.07));
+  for(const z of [-.17,.17]){ell(blk,V(1.82,2.04,z),V(.045,.05,.045));ell(furD,V(1.4,2.12,z*1.6),V(.12,.3,.08),[0,0,z>0?.5:.5]).rotation.x=z>0?-.35:.35}
+  // legs
+  for(const z of [-.24,.24]){
+    limb(fur,V(.78,.95,z),V(.8,.12,z),.13,.11);ell(furL,V(.86,.08,z),V(.15,.08,.12));
+    ell(fur,V(-.86,.98,z*1.2),V(.33,.43,.2));
+    limb(fur,V(-.98,.7,z*1.15),V(-.9,.12,z*1.1),.12,.09);ell(furL,V(-.84,.08,z*1.1),V(.15,.08,.12));
+  }
+  // tail
+  const tc=new T.CatmullRomCurve3([V(-1.2,1.35,0),V(-1.5,1.6,0),V(-1.62,1.95,0)]);
+  dogG.add(new T.Mesh(new T.TubeGeometry(tc,20,.07,12),fur));
+  // shadow
+  const sh=new T.Mesh(new T.CircleGeometry(1.7,48),new T.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.12}));
+  sh.rotation.x=-Math.PI/2;sh.scale.set(1.2,.6,1);sh.position.y=.005;scene.add(sh);
+  // rings
+  const ACC=0xe0662f,DIM=0xffffff;
+  const mkRing=(pos,sc,axis)=>{const g=new T.Group();const m=new T.Mesh(new T.TorusGeometry(1,.045,16,80),new T.MeshStandardMaterial({color:DIM,transparent:true,opacity:.45,roughness:.4,emissive:0x000000}));if(axis==='x')m.rotation.y=Math.PI/2;else m.rotation.x=Math.PI/2;g.add(m);g.position.copy(pos);g.scale.copy(sc);dogG.add(g);return m};
+  const rings={
+    chest:mkRing(V(.68,1.07,0),V(1,.68,.58),'x'),
+    waist:mkRing(V(-.4,1.13,0),V(1,.5,.47),'x'),
+    thigh:mkRing(V(-.86,.95,.29),V(.36,1,.24),'y')
+  };
+  const sc=new T.CatmullRomCurve3([V(1.0,1.62,0),V(.4,1.72,0),V(-.3,1.66,0),V(-1.0,1.64,0),V(-1.2,1.45,0)]);
+  rings.spine=new T.Mesh(new T.TubeGeometry(sc,60,.05,12),new T.MeshStandardMaterial({color:DIM,transparent:true,opacity:.45,roughness:.4,emissive:0x000000}));
+  dogG.add(rings.spine);
+  const anchors={chest:V(.68,.3,.55),waist:V(-.4,.45,.55),thigh:V(-.86,.2,.75),spine:V(-.1,2.05,0)};
+  const labs={};for(const k in anchors){const el=document.createElement('span');el.className='lab';el.textContent=PARTS[k].n.replace('（肌肉評分）','');stage.appendChild(el);labs[k]=el}
+  hi3d=p=>{for(const k in rings){const m=rings[k].material,on=k===p;m.color.setHex(on?ACC:DIM);m.opacity=on?1:.4;m.emissive.setHex(on?0x5a1d05:0);labs[k].classList.toggle('on',on)}};
+  hi3d(part3d);
+  let rotY=-.5,vel=0,drag=false,lx=0,idle=0;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  stage.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;stage.setPointerCapture(e.pointerId);stage.style.cursor='grabbing'});
+  stage.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-lx;lx=e.clientX;rotY+=dx*.012;vel=dx*.012;idle=0});
+  const end=()=>{drag=false;stage.style.cursor='grab'};
+  stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+  const size=()=>{const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<480?40:32;cam.updateProjectionMatrix()};
+  const ro3=new ResizeObserver(size);ro3.observe(stage);size();
+  const tmp=new T.Vector3();
+  const loop=()=>{
+    if(!drag){rotY+=vel;vel*=.92;idle++;if(!reduce&&idle>120)rotY+=.003}
+    dogG.rotation.y=rotY;
+    renderer.render(scene,cam);
+    const w=stage.clientWidth,h=stage.clientHeight;
+    for(const k in anchors){tmp.copy(anchors[k]);dogG.localToWorld(tmp);tmp.project(cam);const el=labs[k];el.style.left=((tmp.x+1)/2*w)+'px';el.style.top=((1-tmp.y)/2*h)+'px';el.style.opacity=tmp.z<1?1:0}
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+const XL=(()=>{
+const enc=new TextEncoder();
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0};
+const xe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+function zip(files){
+  const parts=[],cd=[];let off=0;
+  for(const [name,str] of files){
+    const nb=enc.encode(name),data=enc.encode(str),crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);
+    h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nb.length,true);
+    parts.push(new Uint8Array(h.buffer),nb,data);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);
+    c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    cd.push(new Uint8Array(c.buffer),nb);
+    off+=30+nb.length+data.length;
+  }
+  const cdSize=cd.reduce((a,b)=>a+b.length,0);
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cdSize,true);e.setUint32(16,off,true);
+  const all=[...parts,...cd,new Uint8Array(e.buffer)],out=new Uint8Array(all.reduce((a,b)=>a+b.length,0));
+  let p=0;for(const a of all){out.set(a,p);p+=a.length}return out;
+}
+const col=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function sheetXml(rows,widths){
+  const r=rows.map((row,ri)=>`<row r="${ri+1}">${row.map((v,ci)=>{if(v==null||v==='')return'';const ref=col(ci)+(ri+1),st=ri===0?' s="1"':'';return typeof v==='number'&&isFinite(v)?`<c r="${ref}"${st}><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xe(v)}</t></is></c>`}).join('')}</row>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${r}</sheetData></worksheet>`;
+}
+function write(sheets){
+  const n=sheets.length;
+  const files=[
+    ['[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xe(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`],
+    ['xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${n+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF4E7D8"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ...sheets.map((s,i)=>[`xl/worksheets/sheet${i+1}.xml`,sheetXml(s.rows,s.widths||s.rows[0].map(()=>12))])
+  ];
+  return zip(files);
+}
+const dec=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(m,d)=>String.fromCharCode(+d)).replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCharCode(parseInt(h,16))).replace(/&amp;/g,'&');
+async function inflate(u8){const ds=new DecompressionStream('deflate-raw');const s=new Blob([u8]).stream().pipeThrough(ds);return new Uint8Array(await new Response(s).arrayBuffer())}
+async function unzip(buf){
+  const u=new Uint8Array(buf),v=new DataView(u.buffer,u.byteOffset,u.byteLength);
+  let e=-1;for(let i=u.length-22;i>=Math.max(0,u.length-65557);i--){if(v.getUint32(i,true)===0x06054b50){e=i;break}}
+  if(e<0)throw new Error('不是有效的 xlsx 檔');
+  const cnt=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);const out={};const td=new TextDecoder();
+  for(let k=0;k<cnt;k++){
+    const method=v.getUint16(p+10,true),csize=v.getUint32(p+20,true),nlen=v.getUint16(p+28,true),xlen=v.getUint16(p+30,true),clen=v.getUint16(p+32,true),lo=v.getUint32(p+42,true);
+    const name=td.decode(u.subarray(p+46,p+46+nlen));p+=46+nlen+xlen+clen;
+    if(!/\.(xml|rels)$/.test(name))continue;
+    const ln=v.getUint16(lo+26,true),lx=v.getUint16(lo+28,true),start=lo+30+ln+lx,data=u.subarray(start,start+csize);
+    out[name]=td.decode(method===0?data:await inflate(data));
+  }
+  return out;
+}
+const colIdx=ref=>{const m=ref.match(/^[A-Z]+/)[0];let n=0;for(const ch of m)n=n*26+ch.charCodeAt(0)-64;return n-1};
+async function read(buf){
+  const f=await unzip(buf);
+  const ss=[];if(f['xl/sharedStrings.xml'])for(const m of f['xl/sharedStrings.xml'].matchAll(/<si>([\s\S]*?)<\/si>/g))ss.push(dec([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join('')));
+  const rels={};for(const m of (f['xl/_rels/workbook.xml.rels']||'').matchAll(/<Relationship\b[^>]*>/g)){const id=m[0].match(/Id="([^"]+)"/),t=m[0].match(/Target="([^"]+)"/);if(id&&t)rels[id[1]]=t[1].replace(/^\/?xl\//,'').replace(/^\//,'')}
+  const sheets={};
+  for(const m of (f['xl/workbook.xml']||'').matchAll(/<sheet\b[^>]*>/g)){
+    const name=dec((m[0].match(/name="([^"]*)"/)||[])[1]||''),rid=(m[0].match(/r:id="([^"]+)"/)||[])[1],xml=f['xl/'+rels[rid]];if(!xml)continue;
+    const rows=[];
+    for(const r of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g)){
+      const row=[];
+      for(const c of (r[1]||'').matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+        const at=c[1],ref=(at.match(/r="([A-Z]+\d+)"/)||[])[1],t=(at.match(/t="([^"]+)"/)||[])[1],body=c[2]||'';
+        const vv=(body.match(/<v>([\s\S]*?)<\/v>/)||[])[1];let val;
+        if(t==='s')val=ss[+vv];else if(t==='inlineStr')val=dec([...body.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join(''));else if(t==='str'||t==='e')val=vv!=null?dec(vv):'';else if(t==='b')val=vv==='1';else val=vv!=null&&vv!==''?+vv:'';
+        row[ref?colIdx(ref):row.length]=val;
+      }
+      rows.push(row);
+    }
+    sheets[name]=rows;
+  }
+  return sheets;
+}
+return {write,read};
+})();
+
+const HD_R=[['dog',/犬隻|名字/],['date',/日期/],['w',/體重/],['thigh',/大腿/],['chest',/胸/],['waist',/腰/],['bcs',/BCS/i],['mcs',/肌肉/],['note',/備註/]];
+const HD_D=[['name',/名字|犬隻/],['breed',/品種/],['sex',/性別/],['neut',/結紮/],['age',/年齡|歲/],['birth',/出生/],['ideal',/理想/],['note',/備註/]];
+const today=()=>new Date().toISOString().slice(0,10);
+function buildXlsx(){
+  const dogs=[['名字','品種','性別','結紮','年齡(歲)','理想體重(kg)','備註'],...state.dogs.map(d=>[d.name,d.breed||'',d.sex||'',d.neut||'',ageYears(d.birth),d.ideal??'',d.note||''])];
+  const recs=[['犬隻','日期','體重(kg)','大腿圍(cm)','胸圍(cm)','腰圍(cm)','BCS(1-9)','肌肉評分','備註']];
+  for(const d of state.dogs)for(const r of sorted(d))recs.push([d.name,r.date,r.w??'',r.thigh??'',r.chest??'',r.waist??'',r.bcs??'',r.mcs||'',r.note||'']);
+  return XL.write([{name:'紀錄',rows:recs,widths:[14,12,10,11,10,10,9,11,30]},{name:'犬隻',rows:dogs,widths:[14,12,8,9,10,13,30]},{name:'說明',rows:[['欄位','說明'],['日期','用 2026-11-22 這種格式'],['肌肉評分','正常／輕度流失／中度流失／重度流失'],['BCS','1～9 的整數，4～5 為理想'],['年齡','填歲數，未滿一歲可以填小數，例如 0.5'],['匯入規則','同一隻狗同一天的紀錄會被更新，其他的會加上去']],widths:[12,44]}]);
+}
+let dl=null;
+$('xlOut').addEventListener('click',async()=>{
+  const data=buildXlsx(),name=`狗狗體態紀錄_${today()}.xlsx`;
+  if(dl){try{await dl.save({filename:name,data});$('xlMsg').textContent='已匯出。'}catch(e){$('xlMsg').textContent=e&&e.code==='declined'?'已取消。':e&&e.code==='host_unavailable'?'這個 App 無法存檔，請改用瀏覽器或電腦開啟。':'匯出失敗，請再試一次。'}return}
+  try{const url=URL.createObjectURL(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);$('xlMsg').textContent='已匯出。'}catch(e){$('xlMsg').textContent='這裡無法下載檔案。'}
+});
+const toDate=v=>{if(typeof v==='number'&&v>20000&&v<80000)return new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5).toISOString().slice(0,10);const m=String(v??'').trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''};
+const toNum=v=>{if(v===''||v==null)return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(/[^\d.\-]/g,''));return isFinite(n)?n:null};
+const mapCols=(hdr,spec)=>{const o={};spec.forEach(([k,re])=>{const i=hdr.findIndex(h=>re.test(String(h??'')));if(i>=0)o[k]=i});return o};
+$('xlIn').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  $('xlMsg').textContent='讀取中…';
+  try{
+    const sh=await XL.read(await f.arrayBuffer());
+    const rs=sh['紀錄'],ds=sh['犬隻'];
+    if(!rs&&!ds)throw new Error('找不到「紀錄」或「犬隻」工作表');
+    let nd=0,nr=0,ur=0,skip=0;
+    const byName=n=>state.dogs.find(d=>d.name===n);
+    const ensure=n=>{let d=byName(n);if(!d){d={id:uid(),name:n,breed:'',sex:'',neut:'',birth:'',ideal:null,note:'',records:[]};state.dogs.push(d);nd++}return d};
+    if(ds&&ds.length>1){const c=mapCols(ds[0],HD_D);if(c.name==null)throw new Error('「犬隻」工作表少了「名字」欄');
+      for(const row of ds.slice(1)){const n=String(row[c.name]??'').trim().slice(0,30);if(!n)continue;const d=ensure(n);
+        for(const k of ['breed','sex','neut','note']){if(c[k]!=null&&row[c[k]]!==''&&row[c[k]]!=null)d[k]=String(row[c[k]]).slice(0,120)}
+        if(c.birth!=null&&row[c.birth]){const b=row[c.birth];d.birth=typeof b==='number'?toDate(b).slice(0,7):String(b).replace('/','-').slice(0,7)}
+        if(c.age!=null){const a=toNum(row[c.age]);if(a!=null&&a>=0&&a<=30&&a!==ageYears(d.birth))d.birth=ageToBirth(a)}
+        if(c.ideal!=null){const v=toNum(row[c.ideal]);if(v!=null)d.ideal=v}}}
+    if(rs&&rs.length>1){const c=mapCols(rs[0],HD_R);if(c.dog==null||c.date==null)throw new Error('「紀錄」工作表少了「犬隻」或「日期」欄');
+      for(const row of rs.slice(1)){const n=String(row[c.dog]??'').trim().slice(0,30),date=toDate(row[c.date]);if(!n&&!date)continue;if(!n||!date){skip++;continue}
+        const d=ensure(n),g=k=>c[k]!=null?toNum(row[c[k]]):null;
+        let bcs=g('bcs');if(bcs!=null&&(bcs<1||bcs>9))bcs=null;else if(bcs!=null)bcs=Math.round(bcs);
+        const mcs=c.mcs!=null&&MCS.includes(String(row[c.mcs]??'').trim())?String(row[c.mcs]).trim():'';
+        const rec={date,w:g('w'),thigh:g('thigh'),chest:g('chest'),waist:g('waist'),bcs,mcs,note:c.note!=null?String(row[c.note]??'').slice(0,120):''};
+        const ex=d.records.find(r=>r.date===date);if(ex){Object.assign(ex,rec);ur++}else{d.records.push({id:uid(),...rec});nr++}}}
+    if(!cur)cur=state.dogs[0]?.id||null;
+    render();save('已匯入 Excel。');
+    $('xlMsg').textContent=`匯入完成：新增 ${nd} 隻犬隻、${nr} 筆紀錄，更新 ${ur} 筆${skip?`，略過 ${skip} 筆缺名字或日期的資料`:''}。`;
+  }catch(err){$('xlMsg').textContent='匯入失敗：'+(err&&err.message?err.message:'檔案格式不對')}
+});
+
+const SALT='dog-tracker-v1:';
+async function hashPw(p){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(SALT+p));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+let mMode=null,mThen=null;
+function openModal(mode,title,text,then){
+  mMode=mode;mThen=then;$('mTitle').textContent=title;$('mText').textContent=text;$('mErr').textContent='';
+  for(const id of ['mOld','mNew','mNew2'])$(id).value='';
+  const hasPw=!!state.pw;
+  $('fOld').style.display=(mode==='del'&&hasPw)||(mode==='change'&&hasPw)?'':'none';
+  $('fOld').querySelector('label').textContent=mode==='del'?'刪除密碼':'目前密碼';
+  $('fNew').style.display=$('fNew2').style.display=(mode==='change'||!hasPw)?'':'none';
+  if(mode==='del'&&!hasPw)$('mText').textContent=text+' 還沒設定刪除密碼，請先設定一組，之後刪除都要輸入它。';
+  $('mOk').textContent=mode==='del'?'刪除':'儲存';$('mOk').classList.toggle('pri',mode!=='del');$('mOk').classList.toggle('danger',mode==='del');
+  $('modal').classList.add('open');
+  setTimeout(()=>{const f=[...document.querySelectorAll('#mForm input')].find(i=>i.offsetParent);if(f)f.focus()},30);
+}
+const closeModal=()=>{$('modal').classList.remove('open');mMode=null;mThen=null};
+const askPw=(title,text,then)=>openModal('del',title,text,then);
+$('mCancel').addEventListener('click',closeModal);
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mMode)closeModal()});
+$('mForm').addEventListener('submit',async e=>{
+  e.preventDefault();e.stopPropagation();
+  try{
+    const hasPw=!!state.pw;
+    if(hasPw&&$('fOld').style.display!=='none'){if(await hashPw($('mOld').value)!==state.pw){$('mErr').textContent='密碼不對。';return}}
+    if($('fNew').style.display!=='none'){
+      const a=$('mNew').value,b=$('mNew2').value;
+      if(a.length<4){$('mErr').textContent='新密碼至少 4 個字。';return}
+      if(a!==b){$('mErr').textContent='兩次輸入的新密碼不一樣。';return}
+      state.pw=await hashPw(a);
+    }
+    const then=mThen,mode=mMode;closeModal();
+    if(then)then();else{save('已更新刪除密碼。')}
+    pwInfo();
+  }catch(err){$('mErr').textContent='這個瀏覽器無法處理密碼，請改用其他瀏覽器。'}
+});
+$('pwChange').addEventListener('click',()=>openModal('change',state.pw?'變更刪除密碼':'設定刪除密碼',state.pw?'先輸入目前的密碼，再設定新的。':'設定後，刪除犬隻或紀錄都要輸入這組密碼。',null));
+function pwInfo(){$('pwState').textContent=state.pw?'已設定。刪除犬隻或紀錄時需要輸入密碼。':'還沒設定。第一次刪除時會請你先設定一組。'}
+
+render();
+init3d();
+pwInfo();
+$('status').textContent='資料存在這個瀏覽器。';
+if(window.claude&&window.claude.use){
+  claude.use('downloads').then(x=>{dl=x}).catch(()=>{});
+  claude.use('db').then(x=>{
+    if(!x)return;
+    db=x;state={dogs:[],pw:null};cur=null;render();pwInfo();
+    $('status').textContent='資料連線中…';
+    let timer=setTimeout(()=>{$('status').textContent='暫時連不上共用資料，請稍後再看。'},10000);
+    db.collection('dogs').onSnapshot(snap=>{
+      if(!snap.metadata.fromCache){clearTimeout(timer);$('status').textContent='共用模式：有編輯權限的人新增的資料，大家都看得到。'}
+      const dogs=snap.docs.map(x=>JSON.parse(JSON.stringify(x.data()))).filter(d=>d&&d.name&&Array.isArray(d.records));
+      dogs.sort((a,b)=>(a.created||0)-(b.created||0));
+      synced.dogs={};for(const d of dogs)synced.dogs[d.id]=JSON.stringify(d);
+      state.dogs=dogs;if(!dog())cur=dogs[0]?.id||null;render();
+    },e=>{clearTimeout(timer);$('status').textContent='共用資料讀取失敗，請重新整理頁面。'});
+    db.doc('settings/main').onSnapshot(sn=>{const v=sn.exists?sn.data().pw:null;state.pw=typeof v==='string'?v:null;synced.pw=state.pw;pwInfo()},()=>{});
+  }).catch(()=>{});
+}
+}
+</script>
+</body></html>
